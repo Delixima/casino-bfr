@@ -12,16 +12,18 @@ Casino en ligne pour le RP Demon Slayer. **Monnaie fictive uniquement** : aucun 
 
 | Jeu | Chances de gagner | Gain | Retour (RTP) |
 |---|---|---|---|
-| Chō-Han des Hashira | 50 % | ×1,9 | 95 % |
-| Roulette de la Lune (38 cases) | 47,4 % couleur/parité · 2,6 % numéro | ×2 · ×36 | 94,7 % |
-| Vingt-et-un de la Brigade | ≈ 43 % | ×2 · blackjack ×2,5 | ≈ 97-99 % |
-| Les Cinq Respirations (slots) | 22 % (+ 25 % remboursé) | jusqu'à ×20 | 91 % |
-| Cartes Hanafuda (grattage) | 20 % (+ 10 % remboursé) | jusqu'à ×30 | 93 % |
-| Course des corbeaux Kasugai | 16,7 % victoire · 50 % podium | ×5,5 · ×1,8 | 91,7 % · 90 % |
-| Trois coupes, une Nichirin | 33 % | ×2,7 | 90 % |
-| Bataille des Piliers | 46 % | ×2 (égalité = banque) | 92,3 % |
-| Roue du destin de Muzan | 30 % (+ 20 % remboursé) | jusqu'à ×6 | 92,5 % |
-| Quitte ou double de la Glycine | 45 % par étape | ×2, ×4, ×8 | 90 % → 73 % |
+| Chō-Han (dés) · *Chō-Han des Hashira* | 50 % | ×1,9 | 95 % |
+| Roulette (38 cases) · *Roulette de la Lune* | 47,4 % couleur/parité · 2,6 % numéro | ×2 · ×36 | 94,7 % |
+| Blackjack · *Vingt-et-un de la Brigade* | ≈ 43 % | ×2 · blackjack ×2,5 | ≈ 97-99 % |
+| Machine à sous · *Les Cinq Respirations* | 22 % (+ 25 % remboursé) | jusqu'à ×20 | 91 % |
+| Carte à gratter · *Cartes Hanafuda* | 20 % (+ 10 % remboursé) | jusqu'à ×30 | 93 % |
+| Course de corbeaux · *Corbeaux Kasugai* | 16,7 % victoire · 50 % podium | ×5,5 · ×1,8 | 91,7 % · 90 % |
+| Bonneteau (3 gobelets) · *Trois coupes, une Nichirin* | 33 % | ×2,7 | 90 % |
+| Bataille · *Bataille des Piliers* | 46 % | ×2 (égalité = banque) | 92,3 % |
+| Roue de la fortune · *Roue du destin de Muzan* | 30 % (+ 20 % remboursé) | jusqu'à ×6 | 92,5 % |
+| Quitte ou double · *Glycine* | 45 % par étape | ×2, ×4, ×8 | 90 % → 73 % |
+
+Chaque jeu a une fenêtre « Comment jouer ? » (règles, gains et chances), ouverte automatiquement à la première visite.
 
 Les taux sont vérifiés par des tests automatiques (10 000 manches par jeu, `npm test`).
 
@@ -31,6 +33,7 @@ Les taux sont vérifiés par des tests automatiques (10 000 manches par jeu, `np
 
 1. Crée un projet sur [supabase.com](https://supabase.com).
 2. **SQL Editor** : colle le contenu de `supabase/migrations/001_init.sql` et clique sur *Run*.
+   Si tu avais déjà lancé une ancienne version, lance aussi `002_game_names.sql` (met à jour les noms des jeux).
 3. **Authentication > Sign In / Providers** :
    - laisse le fournisseur **Email** activé (la connexion Steam s'en sert en interne) ;
    - désactive **Allow new users to sign up** : seuls les comptes créés via Steam existent.

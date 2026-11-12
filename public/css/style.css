@@ -276,3 +276,36 @@ td.ctr, th.ctr { text-align: center; font-variant-numeric: tabular-nums; white-s
   .num-grid { grid-template-columns: repeat(7, 1fr); } .cups { gap: 1rem; }
   .uname { max-width: 120px; font-size: .85rem; } .amount, .note { width: 100%; }
 }
+
+/* ---------- Noms de jeux : vrai nom + thème ---------- */
+.theme { color: var(--gold); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 .35rem; }
+.game-card h3 { margin-bottom: .1rem; }
+.game-head { flex-wrap: wrap; }
+.game-titles { flex: 1 1 240px; min-width: 0; }
+.game-titles h2 { margin-bottom: .1rem; }
+.game-titles p { margin: .2rem 0 0; }
+.game-head > .btn { margin-left: auto; }
+.odds { list-style: none; margin: 0 0 .8rem; padding: 0; display: grid; gap: .45rem; }
+.odds li { display: flex; flex-direction: column; font-size: .88rem; border-bottom: 1px dashed var(--line); padding-bottom: .4rem; }
+.odds li:last-child { border-bottom: 0; }
+.odds small { color: var(--muted); }
+
+/* ---------- Fenêtre des règles ---------- */
+body.modal-open { overflow: hidden; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(5, 3, 8, .78); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 1rem; animation: fadeIn .2s; }
+.modal { width: min(640px, 100%); max-height: min(88vh, 760px); display: flex; flex-direction: column; background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--gold); border-radius: var(--radius); box-shadow: 0 30px 80px rgba(0,0,0,.7); animation: pop .25s; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.3rem; border-bottom: 1px solid var(--line); }
+.modal-head h3 { margin: 0; color: var(--gold2); }
+.modal-close { background: none; border: 0; color: var(--muted); font-size: 1.8rem; line-height: 1; cursor: pointer; padding: .1rem .5rem; border-radius: 8px; }
+.modal-close:hover { color: var(--text); background: var(--bg2); }
+.modal-body { padding: 1.1rem 1.3rem; overflow-y: auto; }
+.modal-foot { padding: .9rem 1.3rem; border-top: 1px solid var(--line); text-align: right; }
+.rules-doc .lead { font-size: 1.05rem; color: var(--text); }
+.rules-doc h4 { color: var(--gold2); margin: 1.1rem 0 .5rem; }
+.rules-doc ol { margin: 0; padding-left: 1.3rem; display: grid; gap: .45rem; line-height: 1.5; }
+.rules-doc table { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.rules-doc th, .rules-doc td { padding: .5rem .7rem; }
+.rules-doc th:first-child, .rules-doc td:first-child { padding-left: .8rem; }
+.rules-doc th:last-child, .rules-doc td:last-child { padding-right: .8rem; }
+@keyframes fadeIn { from { opacity: 0; } }
+@media (max-width: 520px) { .modal-backdrop { align-items: end; padding: 0; } .modal { max-height: 92vh; border-radius: var(--radius) var(--radius) 0 0; } .game-head > .btn { margin-left: 0; width: 100%; } }

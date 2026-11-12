@@ -1,5 +1,5 @@
-import { getClient, h, fmt, fmtDate, fmtMult, errMsg, rpc, toast, loadProfile, logout } from './core.js';
-import { GAMES, GAME_BY_ID } from './games.js';
+import { getClient, h, fmt, fmtDate, errMsg, rpc, toast, loadProfile, logout, openModal } from './core.js';
+import { GAMES, GAME_BY_ID, rulesEl } from './games.js';
 
 const app = document.getElementById('app');
 const state = { sb: null, profile: null, config: {}, balance: 0 };
@@ -86,7 +86,8 @@ function lobby() {
       const closed = c && !c.enabled;
       return h('a', { class: 'game-card' + (closed ? ' closed' : ''), href: closed ? null : '#/game/' + g.id },
         h('div', { class: 'gk', 'aria-hidden': 'true' }, g.kanji),
-        h('h3', {}, c ? c.label : g.id),
+        h('h3', {}, g.name),
+        h('div', { class: 'theme' }, g.theme),
         h('p', {}, g.tagline),
         h('div', { class: 'meta' },
           h('span', { class: 'chip gold' }, 'jusqu\'à ' + g.top),
@@ -147,12 +148,24 @@ function gamePage(id) {
   };
   stage.append(g.mount(ctx));
 
+  const showRules = () => openModal(`Comment jouer : ${g.name}`, rulesEl(g));
+  // Première visite de ce jeu : on affiche les règles une fois
+  const seenKey = 'rules_seen_' + id;
+  try {
+    if (!localStorage.getItem(seenKey)) { localStorage.setItem(seenKey, '1'); setTimeout(showRules, 250); }
+  } catch { /* stockage indisponible : on n'ouvre rien d'office */ }
+
   return h('main', { class: 'page' }, header('lobby'),
     h('a', { class: 'back', href: '#/' }, '← Tous les jeux'),
-    h('div', { class: 'game-head' }, h('span', { class: 'gk-title', 'aria-hidden': 'true' }, g.kanji), h('div', {}, h('h2', {}, cfg.label), h('p', { class: 'muted' }, g.tagline))),
+    h('div', { class: 'game-head' },
+      h('span', { class: 'gk-title', 'aria-hidden': 'true' }, g.kanji),
+      h('div', { class: 'game-titles' }, h('h2', {}, g.name), h('div', { class: 'theme' }, g.theme), h('p', { class: 'muted' }, g.tagline)),
+      h('button', { class: 'btn gold', type: 'button', onClick: showRules }, '📖 Comment jouer ?')),
     h('div', { class: 'game-layout' }, stage,
       h('aside', { class: 'side' }, bet.el,
-        h('div', { class: 'rules' }, h('h4', {}, 'Règles et chances'), g.rules.map((r) => h('p', {}, r))))));
+        h('div', { class: 'rules' }, h('h4', {}, 'Gains et chances'),
+          h('ul', { class: 'odds' }, g.help.table.map(([a, b, c]) => h('li', {}, h('span', {}, a), h('small', {}, b + ' · ' + c)))),
+          h('button', { class: 'btn small', type: 'button', onClick: showRules }, 'Voir toutes les règles')))));
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +176,7 @@ async function historyPage() {
   const { data, error } = await state.sb.from('transactions').select('*')
     .eq('user_id', state.profile.id).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(100);
   if (error) throw error;
-  const label = (t) => t.kind === 'game' ? (state.config[t.game] ? state.config[t.game].label : t.game)
+  const label = (t) => t.kind === 'game' ? (GAME_BY_ID[t.game] ? GAME_BY_ID[t.game].name : t.game)
     : t.kind === 'admin_credit' ? 'Jetons reçus (staff)' : 'Jetons retirés (staff)';
   const rows = data.map((t) => h('tr', {},
     h('td', {}, fmtDate(t.created_at)),

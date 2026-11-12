@@ -37,16 +37,16 @@ create table if not exists public.game_config (
 );
 
 insert into public.game_config (game, label, sort) values
-  ('chohan',    'Chō-Han des Hashira',            1),
-  ('roulette',  'Roulette de la Lune',            2),
-  ('blackjack', 'Vingt-et-un de la Brigade',      3),
-  ('slots',     'Les Cinq Respirations',          4),
-  ('scratch',   'Cartes Hanafuda',                5),
-  ('ravens',    'Course des Corbeaux Kasugai',    6),
-  ('cups',      'Trois Coupes, une Nichirin',     7),
-  ('war',       'Bataille des Piliers',           8),
-  ('wheel',     'Roue du Destin de Muzan',        9),
-  ('double',    'Quitte ou double de la Glycine', 10)
+  ('chohan', 'Chō-Han (dés)',            1),
+  ('roulette', 'Roulette',            2),
+  ('blackjack', 'Blackjack',      3),
+  ('slots', 'Machine à sous',          4),
+  ('scratch', 'Carte à gratter',                5),
+  ('ravens', 'Course de corbeaux',    6),
+  ('cups', 'Bonneteau (3 gobelets)',     7),
+  ('war', 'Bataille',           8),
+  ('wheel', 'Roue de la fortune',        9),
+  ('double', 'Quitte ou double', 10)
 on conflict (game) do nothing;
 
 create table if not exists public.transactions (

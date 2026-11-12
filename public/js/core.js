@@ -103,3 +103,39 @@ export async function logout(sb) {
   await sb.auth.signOut();
   location.href = '/';
 }
+
+// Fenêtre modale accessible : Échap, clic à côté, bouton Fermer, focus piégé et rendu.
+export function openModal(title, body) {
+  const previous = document.activeElement;
+  let backdrop;
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('hashchange', close);
+    document.body.classList.remove('modal-open');
+    backdrop.remove();
+    if (previous && previous.focus) previous.focus();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key !== 'Tab') return;
+    const f = [...dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter((x) => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0];
+    const last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+  const closeBtn = h('button', { class: 'modal-close', type: 'button', 'aria-label': 'Fermer', onClick: close }, '×');
+  const dialog = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title' },
+    h('div', { class: 'modal-head' }, h('h3', { id: 'modal-title' }, title), closeBtn),
+    h('div', { class: 'modal-body' }, body),
+    h('div', { class: 'modal-foot' }, h('button', { class: 'btn primary', type: 'button', onClick: close }, "J'ai compris")));
+  backdrop = h('div', { class: 'modal-backdrop', onClick: (e) => { if (e.target === backdrop) close(); } }, dialog);
+  document.body.append(backdrop);
+  document.body.classList.add('modal-open');
+  document.addEventListener('keydown', onKey);
+  window.addEventListener('hashchange', close);
+  closeBtn.focus();
+  return close;
+}
