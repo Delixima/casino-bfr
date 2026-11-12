@@ -639,7 +639,7 @@ begin
 
   v_start := public._rand_int(3) + 1;              -- coupe qui cache la lame au départ
   v_pos := v_start;
-  v_n := 14 + public._rand_int(7);                 -- 14 à 20 échanges
+  v_n := 24 + public._rand_int(9);                 -- 24 à 32 échanges
   for v_i in 1..v_n loop
     loop                                           -- jamais deux fois le même échange de suite
       v_p := public._rand_int(3);

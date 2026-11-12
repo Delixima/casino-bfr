@@ -220,7 +220,7 @@ test('bonneteau : la lame suivie à l\'œil correspond au résultat du serveur',
     assert.equal(s.finished, false);
     assert.equal(Number(s.balance), 99900);                   // mise retenue pendant la partie
     assert.ok(s.details.start >= 1 && s.details.start <= 3);
-    assert.ok(s.details.swaps.length >= 14 && s.details.swaps.length <= 20);
+    assert.ok(s.details.swaps.length >= 24 && s.details.swaps.length <= 32);
     // jamais deux fois le même échange de suite, et seulement des coupes 1 à 3
     s.details.swaps.forEach(([a, b], k) => {
       assert.ok(a >= 1 && b <= 3 && a < b);

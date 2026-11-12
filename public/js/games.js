@@ -389,7 +389,9 @@ function mountCups(ctx) {
     phase = 'shuffle';
     say('Suis la lame des yeux !');
     for (let k = 0; k < swaps.length; k++) {
-      const ms = Math.round(480 - (k / Math.max(1, swaps.length - 1)) * 290);   // de plus en plus vite
+      // Départ tranquille (≈ 420 ms par échange) puis de plus en plus vite (≈ 115 ms), au rythme irrégulier
+      const t = k / Math.max(1, swaps.length - 1);
+      const ms = Math.max(90, Math.round((420 - 305 * Math.pow(t, 0.6)) * (0.85 + Math.random() * 0.3)));
       await swap(swaps[k][0], swaps[k][1], ms);
     }
 
