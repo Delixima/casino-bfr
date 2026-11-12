@@ -38,7 +38,7 @@ function header(active) {
     h('div', { class: 'user' },
       h('div', { class: 'balance', title: 'Tes jetons' }, h('span', { class: 'coin', 'aria-hidden': 'true' }, '◎'), balanceEl, h('small', {}, 'jetons')),
       p.avatar_url ? h('img', { class: 'avatar', src: p.avatar_url, alt: '', width: 36, height: 36 }) : null,
-      h('span', { class: 'uname' }, p.display_name),
+      h('span', { class: 'uname', title: p.display_name }, p.display_name),
       h('button', { class: 'btn small ghost', onClick: () => logout(state.sb) }, 'Quitter')));
 }
 

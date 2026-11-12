@@ -13,7 +13,7 @@ function shell(tab, content) {
   return h('main', { class: 'page' },
     h('header', { class: 'topbar' },
       h('a', { class: 'brand', href: '/' }, h('span', { class: 'brand-kanji', 'aria-hidden': 'true' }, '賭'), h('span', {}, 'Administration', h('small', {}, 'Casino BFR'))),
-      h('div', { class: 'user' }, h('span', { class: 'uname' }, me.display_name),
+      h('div', { class: 'user' }, h('span', { class: 'uname', title: me.display_name }, me.display_name),
         h('a', { class: 'btn small ghost', href: '/' }, 'Retour au casino'),
         h('button', { class: 'btn small ghost', onClick: () => logout(sb) }, 'Quitter'))),
     h('div', { class: 'tabs' }, t('players', 'Joueurs'), t('stats', 'Statistiques'), t('games', 'Jeux'), t('log', 'Journal')),
