@@ -173,7 +173,7 @@ async function historyPage() {
     h('td', { class: 'num' }, fmt(t.balance_after))));
   return h('main', { class: 'page' }, header('history'), h('h2', {}, 'Ton historique'),
     data.length ? h('div', { class: 'tablewrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, ['Date', 'Opération', 'Mise', 'Résultat', 'Solde'].map((x) => h('th', {}, x)))), h('tbody', {}, rows)))
+      h('thead', {}, h('tr', {}, ['Date', 'Opération', 'Mise', 'Résultat', 'Solde'].map((x, i) => h('th', { class: i >= 2 ? 'num' : null }, x)))), h('tbody', {}, rows)))
       : h('p', { class: 'muted' }, 'Aucune opération pour le moment.'));
 }
 

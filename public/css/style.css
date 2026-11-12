@@ -82,7 +82,7 @@ p { margin: 0 0 .7em; line-height: 1.5; }
 .uname { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
 .avatar.ph { display: inline-block; background: var(--panel2); }
-.balance { display: flex; align-items: baseline; gap: .35rem; background: var(--bg2); border: 1px solid var(--gold); border-radius: 999px; padding: .3rem .9rem; }
+.balance { display: flex; align-items: baseline; justify-content: center; gap: .35rem; white-space: nowrap; flex-shrink: 0; background: var(--bg2); border: 1px solid var(--gold); border-radius: 999px; padding: .3rem .9rem; }
 .coin { color: var(--gold); }
 .balance-amount { font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--gold2); }
 .balance small { color: var(--muted); }
@@ -119,8 +119,8 @@ p { margin: 0 0 .7em; line-height: 1.5; }
   background: radial-gradient(600px 300px at 50% 0, rgba(179,32,42,.18), transparent), var(--panel);
   border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem; min-height: 380px;
 }
-.stage.busy button:not(.seg):not(.num):not(.cup) { pointer-events: none; opacity: .6; }
-.stage.busy .seg, .stage.busy .num, .stage.busy .cup, .stage.busy .hana { pointer-events: none; }
+.stage.busy button:not(.seg):not(.rnum):not(.cup) { pointer-events: none; opacity: .6; }
+.stage.busy .seg, .stage.busy .rnum, .stage.busy .cup, .stage.busy .hana { pointer-events: none; }
 .stage-inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
 .side { display: grid; gap: 1rem; }
 .betbox, .rules { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; }
@@ -133,6 +133,7 @@ p { margin: 0 0 .7em; line-height: 1.5; }
 .rules h4 { color: var(--gold2); }
 .rules p { font-size: .88rem; color: var(--muted); }
 
+input.search { flex: 1 1 280px; min-width: 0; }
 input[type=number], input[type=text], input[type=search] {
   background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: .55rem .7rem; font: inherit;
 }
@@ -164,8 +165,8 @@ input:disabled { opacity: .6; }
 .roulette-ball { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; font-size: 2.6rem; font-weight: 800; border: 6px double var(--gold); box-shadow: 0 0 24px rgba(0,0,0,.6) inset; }
 .c-red, .roulette-ball.red { background: #8f1620; } .c-black, .roulette-ball.black { background: #1a1a20; } .c-green, .roulette-ball.green { background: #1f6a41; }
 .num-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; width: 100%; max-width: 520px; }
-.num { border: 1px solid var(--line); color: #fff; border-radius: 6px; padding: .45rem 0; font: inherit; font-weight: 700; cursor: pointer; }
-.num[aria-pressed=true] { outline: 2px solid var(--gold2); }
+.rnum { border: 1px solid var(--line); color: #fff; border-radius: 6px; padding: .45rem 0; font: inherit; font-weight: 700; cursor: pointer; }
+.rnum[aria-pressed=true] { outline: 2px solid var(--gold2); }
 .segmented.wrap { max-width: 540px; }
 
 /* ---------- Cartes ---------- */
@@ -236,7 +237,8 @@ table { width: 100%; border-collapse: collapse; font-size: .92rem; }
 th, td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { color: var(--gold2); font-weight: 600; background: var(--bg2); white-space: nowrap; }
 tr:last-child td { border-bottom: 0; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 6.5rem; padding-right: 1.2rem; }
+td.ctr, th.ctr { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 7rem; }
 .pos { color: #7dffa8; } .neg { color: #ff8b92; }
 .board { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: .5rem; }
 .board li { display: flex; align-items: center; gap: .8rem; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: .6rem 1rem; }
@@ -252,7 +254,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: .9rem 1rem; }
 .stat small { display: block; color: var(--muted); } .stat b { font-size: 1.5rem; font-family: var(--serif); color: var(--gold2); }
 .amount { width: 120px; } .note { width: 180px; }
-.who { display: flex; align-items: center; gap: .6rem; }
+.who { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.who .chip { margin-left: .4rem; vertical-align: middle; }
+.who b { overflow-wrap: anywhere; }
 .who .avatar { width: 32px; height: 32px; }
 .switch { cursor: pointer; display: inline-flex; align-items: center; gap: .3rem; }
 

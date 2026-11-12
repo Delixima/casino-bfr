@@ -3,6 +3,8 @@
 import { getClient, h, fmt, fmtDate, errMsg, rpc, toast, loadProfile, logout } from './core.js';
 
 const app = document.getElementById('app');
+// En-têtes de tableau ; les colonnes numériques (classe) sont alignées comme leurs chiffres
+const heads = (labels, cls = {}) => h('thead', {}, h('tr', {}, labels.map((x, i) => h('th', { class: cls[i] || null }, x))));
 let sb;
 let me;
 
@@ -32,7 +34,7 @@ async function show(tab) {
 
 async function playersTab(search = '') {
   const players = await rpc(sb, 'admin_list_players', { p_search: search || null });
-  const q = h('input', { type: 'search', placeholder: 'Rechercher un pseudo ou un SteamID64…', value: search, 'aria-label': 'Recherche' });
+  const q = h('input', { type: 'search', class: 'search', placeholder: 'Rechercher un pseudo ou un SteamID64…', value: search, 'aria-label': 'Recherche' });
   const form = h('form', { class: 'row', onSubmit: async (e) => {
     e.preventDefault();
     app.replaceChildren(shell('players', await playersTab(q.value.trim())));
@@ -55,7 +57,7 @@ async function playersTab(search = '') {
     return h('tr', {},
       h('td', {}, h('div', { class: 'who' }, p.avatar_url ? h('img', { class: 'avatar', src: p.avatar_url, alt: '', width: 32, height: 32 }) : null,
         h('div', {}, h('b', {}, p.display_name, p.is_admin ? h('span', { class: 'chip gold' }, 'staff') : null), h('small', { class: 'muted block' }, p.steam_id)))),
-      h('td', { class: 'num' }, h('b', {}, fmt(p.balance))),
+      h('td', { class: 'ctr' }, h('b', {}, fmt(p.balance))),
       h('td', {}, h('div', { class: 'row' }, amount, note,
         h('button', { class: 'btn small primary', onClick: () => apply(1) }, 'Donner'),
         h('button', { class: 'btn small danger', onClick: () => apply(-1) }, 'Retirer'))),
@@ -63,7 +65,7 @@ async function playersTab(search = '') {
   });
   return h('section', {}, form,
     players.length ? h('div', { class: 'tablewrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, ['Joueur', 'Solde', 'Ajuster', 'Dernière visite'].map((x) => h('th', {}, x)))), h('tbody', {}, rows)))
+      heads(['Joueur', 'Solde', 'Ajuster', 'Dernière visite'], { 1: 'ctr' }), h('tbody', {}, rows)))
       : h('p', { class: 'muted' }, 'Aucun joueur. Un joueur apparaît ici après sa première connexion Steam.'));
 }
 
@@ -78,7 +80,7 @@ async function statsTab() {
       card('Manches jouées', fmt(tot.r)), card('Total misé', fmt(tot.w)),
       card('Bénéfice de la banque', fmt(tot.w - tot.p)), card('Taux de retour global', tot.w ? (tot.p / tot.w * 100).toFixed(1) + ' %' : '—')),
     h('div', { class: 'tablewrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, ['Jeu', 'Manches', 'Misé', 'Versé', 'Bénéfice banque', 'Retour'].map((x) => h('th', {}, x)))),
+      heads(['Jeu', 'Manches', 'Misé', 'Versé', 'Bénéfice banque', 'Retour'], { 1: 'num', 2: 'num', 3: 'num', 4: 'num', 5: 'num' }),
       h('tbody', {}, s.games.map((g) => h('tr', {}, h('td', {}, g.label), h('td', { class: 'num' }, fmt(g.rounds)), h('td', { class: 'num' }, fmt(g.wagered)),
         h('td', { class: 'num' }, fmt(g.paid)),
         h('td', { class: 'num ' + (g.house_profit >= 0 ? 'pos' : 'neg') }, fmt(g.house_profit)),
@@ -115,7 +117,7 @@ async function logTab() {
   const list = await rpc(sb, 'admin_recent_transactions', { p_limit: 200 });
   const kind = (t) => t.kind === 'game' ? t.game : t.kind === 'admin_credit' ? 'don du staff' : 'retrait du staff';
   return h('section', {}, h('div', { class: 'tablewrap' }, h('table', {},
-    h('thead', {}, h('tr', {}, ['Date', 'Joueur', 'Opération', 'Mise', 'Résultat', 'Solde'].map((x) => h('th', {}, x)))),
+    heads(['Date', 'Joueur', 'Opération', 'Mise', 'Résultat', 'Solde'], { 3: 'num', 4: 'num', 5: 'num' }),
     h('tbody', {}, list.map((t) => h('tr', {}, h('td', {}, fmtDate(t.created_at)),
       h('td', {}, t.display_name, h('small', { class: 'muted block' }, t.steam_id)),
       h('td', {}, kind(t), t.note ? h('small', { class: 'muted block' }, t.note) : null),

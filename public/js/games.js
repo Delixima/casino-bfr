@@ -91,7 +91,7 @@ function mountRoulette(ctx) {
     buttons.set(t, b); return b;
   });
   const nums = [0, 37, ...Array.from({ length: 36 }, (_, i) => i + 1)].map((n) => {
-    const b = h('button', { type: 'button', class: 'num c-' + rouletteColor(n), onClick: () => { sel = { type: 'number', number: n }; refresh(); } }, n === 37 ? '00' : n);
+    const b = h('button', { type: 'button', class: 'rnum c-' + rouletteColor(n), onClick: () => { sel = { type: 'number', number: n }; refresh(); } }, n === 37 ? '00' : n);
     buttons.set('n' + n, b); return b;
   });
   const go = h('button', { class: 'btn primary big', onClick: () => ctx.guard(async () => {
