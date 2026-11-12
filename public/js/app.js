@@ -78,7 +78,8 @@ async function refreshBalance() {
 async function loadConfig() {
   const { data, error } = await state.sb.from('game_config').select('*');
   if (error) throw error;
-  state.config = Object.fromEntries(data.map((c) => [c.game, c]));
+  // Objet sans prototype : une adresse comme #/game/constructor ne doit pas « trouver » un jeu
+  state.config = Object.assign(Object.create(null), Object.fromEntries(data.map((c) => [c.game, c])));
 }
 
 // ---------------------------------------------------------------------------
@@ -98,7 +99,7 @@ function lobby() {
   const hero = h('section', { class: 'hero' },
     h('span', { class: 'pill' }, 'Jetons fictifs · jeu de rôle uniquement'),
     h('h1', {}, 'Le casino de la brigade ', h('em', {}, 'Finance Relation')),
-    h('p', {}, `${GAMES.length} jeux réglés entre 90 et 98 % de retour aux joueurs. Tout se joue côté serveur : personne ne peut toucher à un solde ni choisir un résultat.`),
+    h('p', {}, `${GAMES.length} jeux : les règles, les gains et les chances de chacun sont affichés avant de jouer. Tout se joue côté serveur : personne ne peut toucher à un solde ni choisir un résultat.`),
     h('div', { class: 'row' },
       h('button', { class: 'btn primary big', type: 'button', onClick: () => document.getElementById('jeux').scrollIntoView({ behavior: 'smooth' }) }, 'Voir les jeux', icon('arrow')),
       h('button', { class: 'btn ghost big', type: 'button', onClick: () => openModal('Aide : comment ça marche ?', helpEl()) }, 'Comment ça marche ?')));
@@ -265,21 +266,31 @@ function notFound() {
 // Routeur
 // ---------------------------------------------------------------------------
 
+// Numéro de la dernière navigation : une réponse arrivée trop tard (connexion lente,
+// clics rapides) ne doit jamais remplacer la page de la navigation la plus récente.
+let routeSeq = 0;
+
 async function route() {
   if (!state.profile) return;
+  const seq = ++routeSeq;
+  const stale = () => seq !== routeSeq;
   const path = location.hash.replace(/^#/, '') || '/';
   try {
     await refreshBalance();
+    if (stale()) return;
     await loadConfig();
+    if (stale()) return;
     let view;
     if (path === '/' || path === '') view = lobby();
     else if (path.startsWith('/game/')) view = gamePage(path.slice(6));
     else if (path === '/history') view = await historyPage();
     else if (path === '/leaderboard') view = await leaderboardPage();
     else view = notFound();
+    if (stale()) return;
     app.replaceChildren(view);
     window.scrollTo(0, 0);
   } catch (e) {
+    if (stale()) return;
     console.error(e);
     app.replaceChildren(h('main', { class: 'page' }, h('p', { class: 'alert' }, errMsg(e)), h('button', { class: 'btn', onClick: route }, 'Réessayer')));
   }

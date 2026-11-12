@@ -354,6 +354,8 @@ td.ctr, th.ctr { text-align: center; font-variant-numeric: tabular-nums; white-s
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  /* Le mélange du bonneteau EST le jeu : on le garde visible même avec « réduire les animations » */
+  .cups .cup-wrap { transition-duration: var(--dur, .4s), calc(var(--dur, .4s) / 2) !important; }
 }
 @media (max-width: 520px) {
   .die { font-size: 4rem; } .reel { width: 76px; height: 96px; font-size: 2.8rem; }

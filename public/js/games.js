@@ -638,4 +638,5 @@ export function rulesEl(g) {
     h('p', { class: 'tiny muted' }, 'Jetons fictifs, pour le jeu de rôle uniquement. Tous les tirages sont faits côté serveur.'));
 }
 
-export const GAME_BY_ID = Object.fromEntries(GAMES.map((g) => [g.id, g]));
+// Objet sans prototype : GAME_BY_ID['constructor'] ou ['__proto__'] doit renvoyer « rien »
+export const GAME_BY_ID = Object.assign(Object.create(null), Object.fromEntries(GAMES.map((g) => [g.id, g])));

@@ -41,13 +41,16 @@ async function playersTab(search = '') {
   } }, q, h('button', { class: 'btn' }, 'Chercher'));
 
   const rows = players.map((p) => {
-    const amount = h('input', { type: 'number', step: 1, placeholder: '+/- jetons', 'aria-label': 'Montant pour ' + p.display_name, class: 'amount' });
+    const amount = h('input', { type: 'number', step: 1, placeholder: 'Nombre de jetons', min: 1, 'aria-label': 'Montant pour ' + p.display_name, class: 'amount' });
     const note = h('input', { type: 'text', maxlength: 120, placeholder: 'Motif (optionnel)', 'aria-label': 'Motif', class: 'note' });
     const apply = async (sign) => {
-      const raw = Math.floor(Math.abs(Number(amount.value)));
-      if (!raw) return toast('Entre un montant.', 'error');
+      const text = amount.value.trim();
+      const n = Number(text);
+      if (!text) return toast('Entre un montant.', 'error');
+      if (!Number.isSafeInteger(n) || n <= 0) return toast('Entre un nombre entier positif : « Donner » ajoute des jetons, « Retirer » en enlève.', 'error');
+      if (n > 1000000000000) return toast('Montant trop grand (maximum 1 000 000 000 000).', 'error');
       try {
-        const r = await rpc(sb, 'admin_adjust_balance', { p_steam_id: p.steam_id, p_amount: sign * raw, p_note: note.value.trim() || null });
+        const r = await rpc(sb, 'admin_adjust_balance', { p_steam_id: p.steam_id, p_amount: sign * n, p_note: note.value.trim() || null });
         toast(`${r.display_name} : nouveau solde ${fmt(r.balance)}`, 'success');
         app.replaceChildren(shell('players', await playersTab(q.value.trim())));
       } catch (e) {

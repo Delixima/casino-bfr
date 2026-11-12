@@ -3,7 +3,7 @@
 Casino en ligne pour le RP Demon Slayer. **Monnaie fictive uniquement** : aucun paiement, aucun moyen de paiement, aucun achat de jetons.
 
 - **Connexion Steam** : les jetons sont rattachés au SteamID64, donc impossibles à perdre.
-- **10 jeux** réglés entre 90 % et 98 % de retour aux joueurs : le joueur peut gagner régulièrement, la banque gagne à long terme.
+- **10 jeux** : le joueur peut gagner régulièrement, la banque gagne à long terme. Les jeux de hasard rendent entre 90 % et 98 % des mises ; le quitte ou double descend à 73 % si on insiste, et le bonneteau (jeu d'adresse) rend environ 53 % à qui devine. Chances et gains sont affichés dans les règles de chaque jeu.
 - **Prise en main simple** : écran d'accueil en 3 étapes, bouton « ? Aide », consigne d'une phrase au-dessus de chaque jeu, règles détaillées au premier passage.
 - **Tout est côté serveur** (Supabase) : le navigateur ne peut ni modifier un solde ni choisir un résultat.
 - **Panneau admin** (`/admin.html`) : le staff donne ou retire des jetons, consulte les stats et règle les mises.
