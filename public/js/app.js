@@ -1,4 +1,4 @@
-import { getClient, h, fmt, fmtDate, errMsg, rpc, toast, loadProfile, logout, openModal } from './core.js';
+import { getClient, h, fmt, fmtDate, errMsg, rpc, toast, loadProfile, logout, openModal, icon } from './core.js';
 import { GAMES, GAME_BY_ID, rulesEl } from './games.js';
 import { stepsEl, helpEl } from './help.js';
 
@@ -22,11 +22,12 @@ function loginScreen(error) {
   app.replaceChildren(h('main', { class: 'login' },
     h('div', { class: 'login-card' },
       h('div', { class: 'kanji-big', 'aria-hidden': 'true' }, '賭'),
+      h('div', { class: 'eyebrow' }, 'Brigade Finance Relation'),
       h('h1', {}, 'Casino de la Brigade Finance Relation'),
       h('p', { class: 'muted' }, 'Jetons fictifs pour le jeu de rôle. Aucun argent réel.'),
       stepsEl(),
       error && messages[error] ? h('p', { class: 'alert' }, messages[error]) : null,
-      h('a', { class: 'btn steam big', href: '/.netlify/functions/steam-login' }, 'Se connecter avec Steam'),
+      h('a', { class: 'btn steam big', href: '/.netlify/functions/steam-login' }, icon('login'), 'Se connecter avec Steam'),
       h('p', { class: 'tiny muted' }, 'Tes jetons sont liés à ton compte Steam : tu les retrouves sur tous tes appareils.'))));
 }
 
@@ -37,14 +38,15 @@ function header(active) {
   return h('header', { class: 'topbar' },
     h('a', { class: 'brand', href: '#/' }, h('span', { class: 'brand-kanji', 'aria-hidden': 'true' }, '賭'),
       h('span', {}, 'Casino BFR', h('small', {}, 'Finance Relation'))),
-    h('nav', {}, link('#/', 'Jeux', 'lobby'), link('#/history', 'Historique', 'history'), link('#/leaderboard', 'Classement', 'board'),
-      p.is_admin ? h('a', { href: '/admin.html' }, 'Admin') : null,
-      h('button', { class: 'helpbtn', type: 'button', onClick: () => openModal('Aide : comment ça marche ?', helpEl()) }, '? Aide')),
+    h('nav', { 'aria-label': 'Navigation principale' }, link('#/', 'Jeux', 'lobby'), link('#/history', 'Historique', 'history'), link('#/leaderboard', 'Classement', 'board'),
+      p.is_admin ? h('a', { href: '/admin.html' }, 'Admin') : null),
     h('div', { class: 'user' },
-      h('div', { class: 'balance', title: 'Tes jetons' }, h('span', { class: 'coin', 'aria-hidden': 'true' }, '◎'), balanceEl, h('small', {}, 'jetons')),
-      p.avatar_url ? h('img', { class: 'avatar', src: p.avatar_url, alt: '', width: 36, height: 36 }) : null,
+      h('button', { class: 'helpbtn', type: 'button', onClick: () => openModal('Aide : comment ça marche ?', helpEl()) }, icon('help'), 'Aide'),
+      h('div', { class: 'balance', title: 'Tes jetons' }, h('span', { class: 'coin', 'aria-hidden': 'true' }, '円'), balanceEl, h('small', {}, 'jetons')),
+      p.avatar_url ? h('img', { class: 'avatar', src: p.avatar_url, alt: '', width: 40, height: 40 })
+        : h('span', { class: 'avatar ph', 'aria-hidden': 'true' }, (p.display_name || '?').trim().charAt(0).toUpperCase()),
       h('span', { class: 'uname', title: p.display_name }, p.display_name),
-      h('button', { class: 'btn small ghost', onClick: () => logout(state.sb) }, 'Quitter')));
+      h('button', { class: 'btn icon ghost', type: 'button', 'aria-label': 'Quitter', title: 'Quitter', onClick: () => logout(state.sb) }, icon('logout'))));
 }
 
 function setBalance(n) {
@@ -89,25 +91,60 @@ function lobby() {
     ? h('div', { class: 'notice' }, h('b', {}, 'Tu as 0 jeton. '), 'Pour jouer, demande des jetons au staff de la brigade Finance Relation (en RP) : ils les ajoutent à ton compte et ils apparaissent ici tout de suite.')
     : null;
   const welcome = remembered('welcome_closed') ? null : h('section', { class: 'welcome' },
-    h('button', { class: 'btn small ghost close', type: 'button', onClick: (e) => { remember('welcome_closed'); e.currentTarget.closest('.welcome').remove(); } }, 'Fermer ✕'),
-    h('h2', {}, 'Bienvenue au casino de la brigade Finance Relation 👋'),
+    h('button', { class: 'btn small ghost close', type: 'button', onClick: (e) => { remember('welcome_closed'); e.currentTarget.closest('.welcome').remove(); } }, 'Fermer'),
+    h('h2', {}, 'Prise en main en 3 étapes'),
     stepsEl(),
-    h('p', { class: 'tiny muted' }, "Jetons fictifs, aucun argent réel. Besoin d'aide ? Le bouton « ? Aide » est en haut de la page."));
-  return h('main', { class: 'page' }, header('lobby'), welcome, empty,
-    h('div', { class: 'cards' }, GAMES.map((g) => {
-      const c = state.config[g.id];
-      const closed = c && !c.enabled;
-      return h('a', { class: 'game-card' + (closed ? ' closed' : ''), href: closed ? null : '#/game/' + g.id },
-        h('div', { class: 'gk', 'aria-hidden': 'true' }, g.kanji),
-        h('h3', {}, g.name),
+    h('p', { class: 'foot' }, "Jetons fictifs, aucun argent réel. Besoin d'aide ? Le bouton « Aide » est en haut de la page."));
+  const hero = h('section', { class: 'hero' },
+    h('span', { class: 'pill' }, 'Jetons fictifs · jeu de rôle uniquement'),
+    h('h1', {}, 'Le casino de la brigade ', h('em', {}, 'Finance Relation')),
+    h('p', {}, `${GAMES.length} jeux réglés entre 90 et 98 % de retour aux joueurs. Tout se joue côté serveur : personne ne peut toucher à un solde ni choisir un résultat.`),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary big', type: 'button', onClick: () => document.getElementById('jeux').scrollIntoView({ behavior: 'smooth' }) }, 'Voir les jeux', icon('arrow')),
+      h('button', { class: 'btn ghost big', type: 'button', onClick: () => openModal('Aide : comment ça marche ?', helpEl()) }, 'Comment ça marche ?')));
+
+  const cards = GAMES.map((g) => {
+    const c = state.config[g.id];
+    const closed = c && !c.enabled;
+    const k = [...g.kanji].length;
+    return h('a', { class: 'game-card' + (closed ? ' closed' : ''), href: closed ? null : '#/game/' + g.id, 'data-kind': g.kind },
+      h('div', { class: 'card-top' },
+        h('span', { class: 'seal' + (k > 2 ? ' k3' : k > 1 ? ' k2' : ''), 'aria-hidden': 'true' }, g.kanji),
+        h('div', { class: 'meta' }, h('span', { class: 'chip kind' }, g.kind), closed ? h('span', { class: 'chip red' }, 'Fermé') : null)),
+      h('div', { class: 'card-body' },
         h('div', { class: 'theme' }, g.theme),
-        h('p', {}, g.tagline),
-        h('div', { class: 'meta' },
-          h('span', { class: 'chip kind' }, g.kind),
-          h('span', { class: 'chip gold' }, 'jusqu\'à ' + g.top),
-          c ? h('span', { class: 'chip' }, `${fmt(c.min_bet)} – ${fmt(c.max_bet)}`) : null,
-          closed ? h('span', { class: 'chip red' }, 'Fermé') : null));
-    })));
+        h('h3', {}, g.name),
+        h('p', {}, g.tagline)),
+      h('div', { class: 'card-foot' },
+        h('div', { class: 'card-stats' },
+          h('span', { class: 'stat-mini' }, h('small', {}, 'Gain max'), h('b', { class: 'g' }, g.top)),
+          c ? h('span', { class: 'stat-mini' }, h('small', {}, 'Mise'), h('b', {}, `${fmt(c.min_bet)} – ${fmt(c.max_bet)}`)) : null),
+        h('span', { class: 'play' }, 'Jouer', icon('arrow'))));
+  });
+  const kinds = ['Tous', ...new Set(GAMES.map((g) => g.kind))];
+  const filterBtns = kinds.map((kind) => h('button', {
+    class: 'filter', type: 'button', 'aria-pressed': kind === 'Tous' ? 'true' : 'false',
+    onClick: () => {
+      filterBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.textContent === kind)));
+      cards.forEach((el) => { el.hidden = kind !== 'Tous' && el.dataset.kind !== kind; });
+    },
+  }, kind));
+
+  return h('main', { class: 'page' }, header('lobby'),
+    h('div', { class: 'lobby-top' }, hero, welcome),
+    empty,
+    h('section', { id: 'jeux' },
+      h('div', { class: 'section-head' },
+        h('div', {}, h('div', { class: 'eyebrow' }, 'Salle de jeu'), h('h2', {}, 'Les jeux')),
+        h('div', { class: 'filters', role: 'group', 'aria-label': 'Filtrer les jeux' }, filterBtns)),
+      h('div', { class: 'cards' }, cards)),
+    footer());
+}
+
+function footer() {
+  return h('footer', { class: 'site-foot' },
+    h('span', {}, 'Casino de la Brigade Finance Relation · Corps des Pourfendeurs de Démons'),
+    h('span', {}, 'Monnaie fictive uniquement · aucun paiement'));
 }
 
 // ---------------------------------------------------------------------------
@@ -118,12 +155,12 @@ function betBox(cfg) {
   const input = h('input', { type: 'number', inputmode: 'numeric', min: cfg.min_bet, max: cfg.max_bet, step: 1, value: cfg.min_bet, 'aria-label': 'Mise en jetons' });
   const clamp = (v) => Math.max(cfg.min_bet, Math.min(cfg.max_bet, Math.floor(v) || cfg.min_bet));
   const set = (v) => { input.value = clamp(v); };
-  const chip = (label, fn) => h('button', { type: 'button', class: 'chip-btn', onClick: () => set(fn(Number(input.value) || cfg.min_bet)) }, label);
+  const chip = (label, fn, cls = '') => h('button', { type: 'button', class: 'chip-btn ' + cls, onClick: () => set(fn(Number(input.value) || cfg.min_bet)) }, label);
   const presets = [cfg.min_bet, 100, 500, 1000, 5000].filter((v, i, a) => v >= cfg.min_bet && v <= cfg.max_bet && a.indexOf(v) === i);
   const el = h('div', { class: 'betbox' },
     h('div', { class: 'bet-balance-row' }, h('small', {}, 'Tes jetons'), h('b', { class: 'bet-balance' }, fmt(state.balance))),
     h('label', {}, 'Combien veux-tu miser ?'), input,
-    h('div', { class: 'chips' }, presets.map((v) => chip(fmt(v), () => v)),
+    h('div', { class: 'chips' }, presets.map((v, i) => chip(fmt(v), () => v, 'token t' + i)),
       chip('½', (v) => v / 2), chip('×2', (v) => v * 2), chip('Max', () => Math.min(cfg.max_bet, state.balance))),
     h('small', { class: 'muted' }, `Mise : ${fmt(cfg.min_bet)} à ${fmt(cfg.max_bet)} jetons`));
   return {
@@ -172,12 +209,12 @@ function gamePage(id) {
   } catch { /* stockage indisponible : on n'ouvre rien d'office */ }
 
   return h('main', { class: 'page' }, header('lobby'),
-    h('a', { class: 'back', href: '#/' }, '← Tous les jeux'),
+    h('a', { class: 'back', href: '#/' }, icon('back'), 'Tous les jeux'),
     h('div', { class: 'game-head' },
-      h('span', { class: 'gk-title', 'aria-hidden': 'true' }, g.kanji),
-      h('div', { class: 'game-titles' }, h('h2', {}, g.name), h('div', { class: 'theme' }, g.theme), h('p', { class: 'muted' }, g.tagline)),
-      h('button', { class: 'btn gold', type: 'button', onClick: showRules }, '📖 Comment jouer ?')),
-    h('div', { class: 'hint' }, h('span', { class: 'hint-ico', 'aria-hidden': 'true' }, '👉'), h('span', {}, g.hint)),
+      h('span', { class: 'gk-title' + ([...g.kanji].length > 2 ? ' k3' : [...g.kanji].length > 1 ? ' k2' : ''), 'aria-hidden': 'true' }, g.kanji),
+      h('div', { class: 'game-titles' }, h('div', { class: 'theme' }, g.theme), h('h1', {}, g.name), h('p', { class: 'muted' }, g.tagline)),
+      h('button', { class: 'btn ghost', type: 'button', onClick: showRules }, icon('book'), 'Comment jouer ?')),
+    h('div', { class: 'hint' }, icon('info'), h('span', {}, g.hint)),
     h('div', { class: 'game-layout' }, stage,
       h('aside', { class: 'side' },
         h('div', { class: 'lowfunds', hidden: state.balance >= cfg.min_bet }, `Tu n'as pas assez de jetons pour jouer ici (mise minimale : ${fmt(cfg.min_bet)}). Demande des jetons au staff de la brigade.`),

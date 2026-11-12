@@ -35,6 +35,22 @@ export function h(tag, props, ...kids) {
   return el;
 }
 
+// Icônes au trait (SVG statiques, aucune donnée utilisateur)
+const ICONS = {
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+  login: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>',
+  arrow: '<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
+  back: '<path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+};
+export function icon(name) {
+  const t = document.createElement('template');
+  t.innerHTML = `<svg class="ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ''}</svg>`;
+  return t.content.firstChild;
+}
+
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const fmt = (n) => Number(n || 0).toLocaleString('fr-FR');
 export const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
