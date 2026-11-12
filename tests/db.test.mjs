@@ -115,7 +115,7 @@ test('mises invalides, solde insuffisant et choix invalides sont refusés sans t
   await fails(rpc('play_instant', 'roulette', 100, '{"type":"number","number":99}'), 'invalid_choice');
   await fails(rpc('play_instant', 'roulette', 100, '{"type":"bidon"}'), 'invalid_choice');
   await fails(rpc('play_instant', 'ravens', 100, '{"type":"win","pick":9}'), 'invalid_choice');
-  await fails(rpc('play_instant', 'cups', 100, '{"pick":0}'), 'invalid_choice');
+  await fails(rpc('play_instant', 'cups', 100, '{"pick":1}'), 'unknown_game');   // le bonneteau a ses propres fonctions
   await give(U1, 50);
   await fails(rpc('play_instant', 'slots', 100, '{}'), 'insufficient_funds');
   assert.equal(await balance(U1), 50);
@@ -129,7 +129,6 @@ const INSTANT = [
   ['scratch', {}],
   ['ravens', { type: 'win', pick: 3 }],
   ['ravens', { type: 'podium', pick: 3 }],
-  ['cups', { pick: 2 }],
   ['war', {}],
   ['wheel', {}],
 ];
@@ -164,12 +163,11 @@ const THEORY = [
   ['scratch',  {},                             0.93],
   ['ravens',   { type: 'win', pick: 1 },       5.5 / 6],
   ['ravens',   { type: 'podium', pick: 4 },    0.90],
-  ['cups',     { pick: 1 },                    0.90],
   ['war',      {},                             12 / 13],
   ['wheel',    {},                             0.925],
 ];
 // Écart-type du gain par manche (en multiple de la mise), pour fixer la tolérance
-const SD = { chohan: 0.95, roulette: 1, slots: 2.2, scratch: 1.9, ravens: 2.3, cups: 1.3, war: 1, wheel: 1.3 };
+const SD = { chohan: 0.95, roulette: 1, slots: 2.2, scratch: 1.9, ravens: 2.3, war: 1, wheel: 1.3 };
 
 for (const [game, choice, rtp] of THEORY) {
   test(`RTP ${game} ${JSON.stringify(choice)} ≈ ${(rtp * 100).toFixed(1)} %`, { timeout: 120000 }, async () => {
@@ -203,6 +201,87 @@ for (const [game, choice, rtp] of THEORY) {
       `victoires ${(Number(row.wins) / N * 100).toFixed(1)} %, défaites ${(Number(row.losses) / N * 100).toFixed(1)} %`);
   });
 }
+
+
+// ---- Bonneteau (jeu d'adresse : la lame est mélangée sous les yeux du joueur) ----
+// Rejoue les échanges comme le fait l'interface : suit la lame de coupe en coupe.
+function followBlade(start, swaps) {
+  let pos = start;
+  for (const [a, b] of swaps) { if (pos === a) pos = b; else if (pos === b) pos = a; }
+  return pos;
+}
+
+test('bonneteau : la lame suivie à l\'œil correspond au résultat du serveur', { timeout: 120000 }, async () => {
+  await as(U2);
+  let wins = 0, losses = 0;
+  for (let i = 0; i < 150; i++) {
+    await give(U2, 100000);
+    const s = await rpc('cups_start', 100);
+    assert.equal(s.finished, false);
+    assert.equal(Number(s.balance), 99900);                   // mise retenue pendant la partie
+    assert.ok(s.details.start >= 1 && s.details.start <= 3);
+    assert.ok(s.details.swaps.length >= 14 && s.details.swaps.length <= 20);
+    // jamais deux fois le même échange de suite, et seulement des coupes 1 à 3
+    s.details.swaps.forEach(([a, b], k) => {
+      assert.ok(a >= 1 && b <= 3 && a < b);
+      if (k) assert.notDeepEqual(s.details.swaps[k - 1], [a, b]);
+    });
+    assert.equal(JSON.stringify(s).includes('final'), false, 'la position finale ne doit pas être envoyée avant le choix');
+    await fails(rpc('cups_start', 100), 'game_in_progress');
+    const cur = await rpc('cups_current');
+    assert.equal(cur.details.resumed, true);
+    assert.equal(JSON.stringify(cur).includes('start'), false, 'reprise : aucune info sur la lame');
+
+    const seen = followBlade(s.details.start, s.details.swaps);    // ce qu'un joueur attentif voit
+    const r = await rpc('cups_pick', seen);
+    assert.equal(r.details.winning_cup, seen, 'le serveur et l\'animation doivent être d\'accord');
+    assert.equal(r.result, 'win');
+    assert.equal(Number(r.payout), 160);                           // x1,6
+    assert.equal(await balance(U2), 99900 + 160);
+    wins++;
+    assert.equal(await rpc('cups_current'), null);
+  }
+  // mauvais choix : perdu, mise perdue
+  await give(U2, 1000);
+  const s2 = await rpc('cups_start', 100);
+  const seen2 = followBlade(s2.details.start, s2.details.swaps);
+  const wrong = seen2 === 1 ? 2 : 1;
+  const r2 = await rpc('cups_pick', wrong);
+  assert.equal(r2.result, 'lose');
+  assert.equal(Number(r2.payout), 0);
+  assert.equal(await balance(U2), 900);
+  losses++;
+  assert.equal(wins, 150); assert.equal(losses, 1);
+});
+
+test('bonneteau : choix invalide, aucune partie, mises limitées', async () => {
+  await as(U2);
+  await fails(rpc('cups_pick', 1), 'no_active_game');
+  await give(U2, 100000);
+  await fails(rpc('cups_start', 5), 'invalid_bet');
+  await fails(rpc('cups_start', 1001), 'invalid_bet');           // mise max par défaut : 1000
+  await rpc('cups_start', 100);
+  await fails(rpc('cups_pick', 0), 'invalid_choice');
+  await fails(rpc('cups_pick', 4), 'invalid_choice');
+  await fails(rpc('cups_pick', null), 'invalid_choice');
+  await rpc('cups_pick', 2);                                       // termine la partie
+});
+
+test('bonneteau : un joueur au hasard gagne environ 1 fois sur 3 (retour ≈ 53 %)', { timeout: 120000 }, async () => {
+  await as(U2);
+  await give(U2, 1000000000);
+  const N2 = 3000;
+  let wins = 0;
+  for (let i = 0; i < N2; i++) {
+    await rpc('cups_start', 100);
+    const r = await rpc('cups_pick', (i % 3) + 1);                 // choix sans regarder
+    if (r.result === 'win') wins++;
+  }
+  const p = 1 / 3;
+  const freq = wins / N2;
+  assert.ok(Math.abs(freq - p) < 5 * Math.sqrt(p * (1 - p) / N2), `fréquence ${freq.toFixed(3)} vs ${p.toFixed(3)}`);
+  console.log(`  bonneteau (choix au hasard): victoires ${(freq * 100).toFixed(1)} % ⇒ retour ${(freq * 160).toFixed(0)} %`);
+});
 
 // ---- Blackjack ----
 test('blackjack : parties complètes, solde cohérent, une seule partie à la fois', { timeout: 120000 }, async () => {

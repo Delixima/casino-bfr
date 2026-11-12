@@ -299,36 +299,118 @@ function mountRavens(ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// 7. Trois coupes
+// 7. Bonneteau : on suit la lame des yeux
 // ---------------------------------------------------------------------------
 
 function mountCups(ctx) {
-  let mine = 2;
+  let phase = 'idle';                      // idle | watch | shuffle | choose | reveal
+  const status = h('p', { class: 'cups-status', 'aria-live': 'polite' });
+  const say = (t) => { status.textContent = t; };
   const out = h('div', { class: 'result' });
-  const cups = [1, 2, 3].map((n) => {
-    const under = h('div', { class: 'under' }, '');
-    const cup = h('button', { type: 'button', class: 'cup', 'aria-pressed': String(n === mine), 'aria-label': 'Coupe ' + n,
-      onClick: () => { mine = n; cups.forEach((c) => c.cup.setAttribute('aria-pressed', String(c.n === n))); } },
-      h('span', { class: 'cup-top' }, '杯'));
-    return { n, cup, under, wrap: h('div', { class: 'cup-wrap' }, under, cup) };
+
+  const cups = [0, 1, 2].map((i) => {
+    const under = h('div', { class: 'under' });
+    const cup = h('button', { type: 'button', class: 'cup', 'aria-label': 'Coupe ' + (i + 1) }, h('span', { class: 'cup-top' }, '杯'));
+    const wrap = h('div', { class: 'cup-wrap' }, under, cup);
+    const c = { slot: i + 1, under, cup, wrap };
+    cup.addEventListener('click', () => choose(c));
+    return c;
   });
+  const board = h('div', { class: 'cups' }, cups.map((c) => c.wrap));
+  const place = () => cups.forEach((c) => c.wrap.style.setProperty('--s', c.slot));
+  const atSlot = (n) => cups.find((c) => c.slot === n);
+  const setPickable = (on) => cups.forEach((c) => c.cup.classList.toggle('pickable', on));
+  const reset = () => {
+    cups.forEach((c, i) => {
+      c.slot = i + 1; c.under.textContent = '';
+      c.wrap.classList.remove('lift'); c.cup.classList.remove('chosen', 'pickable'); c.wrap.style.transform = '';
+    });
+    place();
+  };
+
+  // Échange visible de deux coupes (celle de devant passe devant, l'autre derrière)
+  async function swap(a, b, ms) {
+    const ca = atSlot(a); const cb = atSlot(b);
+    [ca.slot, cb.slot] = [cb.slot, ca.slot];
+    for (const c of [ca, cb]) c.wrap.style.setProperty('--dur', ms + 'ms');
+    ca.wrap.style.transform = 'translateY(16px) scale(1.06)';
+    cb.wrap.style.transform = 'translateY(-10px) scale(.96)';
+    place();
+    await sleep(ms / 2);
+    ca.wrap.style.transform = ''; cb.wrap.style.transform = '';
+    await sleep(ms / 2 + 25);
+  }
+
+  function choose(c) {
+    if (phase !== 'choose') return;
+    ctx.guard(async () => {
+      phase = 'reveal';
+      setPickable(false);
+      c.cup.classList.add('chosen');
+      let r;
+      try {
+        r = await rpc(ctx.sb, 'cups_pick', { p_pick: c.slot });
+      } catch (e) {
+        phase = 'choose'; setPickable(true); c.cup.classList.remove('chosen');
+        throw e;
+      }
+      const w = r.details.winning_cup;
+      cups.forEach((x) => { x.under.textContent = x.slot === w ? '刀' : ''; x.wrap.classList.add('lift'); });
+      await sleep(700);
+      say('');
+      out.replaceChildren(banner(r, w === c.slot ? 'Bien vu, tu as suivi la lame !' : `La lame était sous la coupe ${w}.`));
+      ctx.setBalance(r.balance);
+      ctx.bet.lock(false);
+      phase = 'idle';
+      go.hidden = false; go.textContent = 'Rejouer';
+    });
+  }
+
   const go = h('button', { class: 'btn primary big', onClick: () => ctx.guard(async () => {
     out.replaceChildren();
-    cups.forEach((c) => { c.wrap.classList.remove('lift'); c.under.textContent = ''; });
-    const r = await play(ctx, { pick: mine });
-    cups.forEach((c) => c.wrap.classList.add('shuffle'));
+    reset();
+    const bet = ctx.checkBet();
+    const s = await rpc(ctx.sb, 'cups_start', { p_bet: bet });
+    ctx.setBalance(s.balance);
+    ctx.bet.lock(true);
+    go.hidden = true;
+    const { start, swaps } = s.details;
+
+    phase = 'watch';
+    say('Regarde bien : voici la lame…');
+    const blade = atSlot(start);
+    blade.under.textContent = '刀';
+    await sleep(350);
+    blade.wrap.classList.add('lift');
     await sleep(1500);
-    cups.forEach((c) => {
-      c.wrap.classList.remove('shuffle');
-      c.under.textContent = c.n === r.details.winning_cup ? '刀' : '';
-      c.wrap.classList.add('lift');
-    });
-    await sleep(500);
-    out.replaceChildren(banner(r, r.details.winning_cup === mine ? 'La lame Nichirin était là !' : `La lame était sous la coupe ${r.details.winning_cup}`));
-    ctx.setBalance(r.balance);
-  }) }, 'Mélanger et révéler');
-  return h('div', { class: 'stage-inner' }, h('p', { class: 'muted center' }, 'Choisis la coupe qui cache la lame :'),
-    h('div', { class: 'cups' }, cups.map((c) => c.wrap)), go, out);
+    blade.wrap.classList.remove('lift');
+    await sleep(600);
+
+    phase = 'shuffle';
+    say('Suis la lame des yeux !');
+    for (let k = 0; k < swaps.length; k++) {
+      const ms = Math.round(480 - (k / Math.max(1, swaps.length - 1)) * 290);   // de plus en plus vite
+      await swap(swaps[k][0], swaps[k][1], ms);
+    }
+
+    phase = 'choose';
+    say('Où est la lame ? Clique sur une coupe.');
+    setPickable(true);
+  }) }, 'Jouer');
+
+  place();
+  say('Règle ta mise puis clique sur « Jouer » : la lame te sera montrée, puis les coupes seront mélangées. Suis-la des yeux !');
+  // Reprise d'une partie commencée avant un rechargement de la page (le mélange est perdu)
+  rpc(ctx.sb, 'cups_current').then((s) => {
+    if (!s) return;
+    ctx.bet.lock(true);
+    go.hidden = true;
+    phase = 'choose';
+    say('Une partie était en cours (tu as raté le mélange). Choisis une coupe : un joueur qui n\'a pas suivi a 1 chance sur 3.');
+    setPickable(true);
+  }).catch(() => {});
+
+  return h('div', { class: 'stage-inner' }, status, board, go, out);
 }
 
 // ---------------------------------------------------------------------------
@@ -436,7 +518,7 @@ function mountDouble(ctx) {
 // ---------------------------------------------------------------------------
 
 export const GAMES = [
-  { id: 'chohan', kanji: '丁半', name: 'Chō-Han (dés)', theme: 'Chō-Han des Hashira',
+  { id: 'chohan', kind: 'Hasard', hint: "Choisis Chō (pair) ou Han (impair), règle ta mise, puis lance les dés.", kanji: '丁半', name: 'Chō-Han (dés)', theme: 'Chō-Han des Hashira',
     tagline: 'Pair ou impair avec deux dés', top: '×1,9', mount: mountChohan,
     help: {
       goal: 'Devine si le total de deux dés sera pair ou impair.',
@@ -446,7 +528,7 @@ export const GAMES = [
       table: [['Bon choix', '50 %', '×1,9 la mise'], ['Mauvais choix', '50 %', 'Mise perdue']],
       note: 'Exemple : tu mises 100 et tu gagnes, tu reçois 190 (gain net : 90).',
     } },
-  { id: 'roulette', kanji: '月', name: 'Roulette', theme: 'Roulette de la Lune',
+  { id: 'roulette', kind: 'Hasard', hint: "Choisis ton pari (couleur, parité ou numéro), règle ta mise, puis lance la bille.", kanji: '月', name: 'Roulette', theme: 'Roulette de la Lune',
     tagline: 'Parie sur une couleur ou un numéro', top: '×36', mount: mountRoulette,
     help: {
       goal: "Devine où s'arrête la bille sur une roue de 38 cases : les numéros 1 à 36, plus le 0 et le 00 (cases vertes).",
@@ -456,7 +538,7 @@ export const GAMES = [
         ['Numéro précis', '2,6 %', '×36']],
       note: 'Le 0 et le 00 font perdre tous les paris, sauf si tu as misé dessus.',
     } },
-  { id: 'blackjack', kanji: '二十一', name: 'Blackjack', theme: 'Vingt-et-un de la Brigade',
+  { id: 'blackjack', kind: 'Stratégie', hint: "Règle ta mise et distribue. Tire des cartes pour t'approcher de 21 sans le dépasser.", kanji: '二十一', name: 'Blackjack', theme: 'Vingt-et-un de la Brigade',
     tagline: 'Approche 21 sans dépasser', top: '×2,5', mount: mountBlackjack,
     help: {
       goal: 'Fais une main plus proche de 21 que celle du croupier, sans dépasser 21.',
@@ -468,7 +550,7 @@ export const GAMES = [
         ['Égalité', '≈ 9 %', 'Mise rendue'], ['Défaite', '≈ 48 %', 'Mise perdue']],
       note: 'Les chances sont approximatives et dépendent de ta façon de jouer. Les cartes sont tirées dans un sabot infini. Ta main est conservée si tu quittes la page.',
     } },
-  { id: 'slots', kanji: '呼吸', name: 'Machine à sous', theme: 'Les Cinq Respirations',
+  { id: 'slots', kind: 'Hasard', hint: "Règle ta mise et lance : trois symboles identiques font gagner.", kanji: '呼吸', name: 'Machine à sous', theme: 'Les Cinq Respirations',
     tagline: 'Aligne trois symboles identiques', top: '×20', mount: mountSlots,
     help: {
       goal: 'Fais apparaître trois symboles identiques sur les trois rouleaux.',
@@ -477,7 +559,7 @@ export const GAMES = [
       table: [['刀 刀 刀', '1 %', '×20'], ['炎 炎 炎', '3 %', '×5'], ['水 水 水', '8 %', '×2'], ['雷 雷 雷', '10 %', '×1,5'],
         ['藤 藤 藤', '25 %', 'Mise rendue'], ['Autre combinaison', '53 %', 'Mise perdue']],
     } },
-  { id: 'scratch', kanji: '花札', name: 'Carte à gratter', theme: 'Cartes Hanafuda',
+  { id: 'scratch', kind: 'Hasard', hint: "Achète un ticket puis gratte les cartes : trois fleurs identiques font gagner.", kanji: '花札', name: 'Carte à gratter', theme: 'Cartes Hanafuda',
     tagline: 'Gratte et trouve trois fleurs identiques', top: '×30', mount: mountScratch,
     help: {
       goal: 'Gratte les 6 cartes : trois fleurs identiques te font gagner.',
@@ -488,7 +570,7 @@ export const GAMES = [
         ['Aucun triplé', '70 %', 'Mise perdue']],
       note: "Le résultat est décidé dès l'achat du ticket : gratter ne change rien, ça ne fait que le révéler.",
     } },
-  { id: 'ravens', kanji: '鴉', name: 'Course de corbeaux', theme: 'Corbeaux Kasugai',
+  { id: 'ravens', kind: 'Hasard', hint: "Choisis ton corbeau et ton pari, règle ta mise, puis lance la course.", kanji: '鴉', name: 'Course de corbeaux', theme: 'Corbeaux Kasugai',
     tagline: 'Parie sur le corbeau gagnant', top: '×5,5', mount: mountRavens,
     help: {
       goal: 'Six corbeaux courent : parie sur celui qui gagnera ou qui finira sur le podium.',
@@ -497,16 +579,19 @@ export const GAMES = [
       table: [['Victoire (1er)', '16,7 %', '×5,5'], ['Podium (top 3)', '50 %', '×1,8'], ['Perdu', 'le reste', 'Mise perdue']],
       note: 'Tous les corbeaux ont les mêmes chances : choisir le 1 ou le 6 ne change rien.',
     } },
-  { id: 'cups', kanji: '杯', name: 'Bonneteau (3 gobelets)', theme: 'Trois coupes, une Nichirin',
-    tagline: 'Devine sous quelle coupe est la lame', top: '×2,7', mount: mountCups,
+  { id: 'cups', kind: 'Adresse', hint: "Règle ta mise et lance : la lame est montrée puis les coupes sont mélangées. Suis-la, puis clique sur la bonne coupe.",
+    kanji: '杯', name: 'Bonneteau (3 gobelets)', theme: 'Trois coupes, une Nichirin',
+    tagline: 'Suis la lame des yeux', top: '×1,6', mount: mountCups,
     help: {
-      goal: 'Une lame est cachée sous une des trois coupes : devine laquelle.',
-      steps: ['Choisis ta mise.', 'Clique sur la coupe de ton choix.', 'Clique sur « Mélanger et révéler » : les coupes sont mélangées puis soulevées.',
-        'Si la lame est sous ta coupe, tu gagnes.'],
-      table: [['Bonne coupe', '33 %', '×2,7'], ['Mauvaise coupe', '67 %', 'Mise perdue']],
-      note: 'La lame est placée au hasard, quel que soit ton choix.',
+      goal: 'Une lame est cachée sous une coupe, puis les trois coupes sont mélangées : retrouve où elle est passée.',
+      steps: ['Choisis ta mise puis clique sur « Jouer » : la mise est prélevée.',
+        'La lame est montrée sous une coupe, puis recachée.',
+        'Les coupes sont mélangées de plus en plus vite : suis des yeux celle qui cache la lame.',
+        "Quand le mélange s'arrête, clique sur la coupe où tu penses que se trouve la lame."],
+      table: [['Tu retrouves la lame', 'Selon ton attention (1 sur 3 si tu devines)', '×1,6'], ['Tu te trompes', 'Le reste', 'Mise perdue']],
+      note: "C'est un jeu d'adresse : le mélange est réel, pas truqué. Si tu quittes la page pendant la partie, ta mise reste en jeu et tu pourras choisir une coupe à ton retour (sans avoir vu le mélange).",
     } },
-  { id: 'war', kanji: '柱', name: 'Bataille', theme: 'Bataille des Piliers',
+  { id: 'war', kind: 'Hasard', hint: "Règle ta mise et tire une carte : la plus haute gagne.", kanji: '柱', name: 'Bataille', theme: 'Bataille des Piliers',
     tagline: 'Ta carte contre celle du croupier', top: '×2', mount: mountWar,
     help: {
       goal: 'Toi et le croupier tirez chacun une carte : la plus haute gagne.',
@@ -516,7 +601,7 @@ export const GAMES = [
       table: [['Ta carte est plus haute', '46 %', '×2'], ['Égalité', '7,7 %', 'La banque gagne (mise perdue)'],
         ['Carte du croupier plus haute', '46 %', 'Mise perdue']],
     } },
-  { id: 'wheel', kanji: '運命', name: 'Roue de la fortune', theme: 'Roue du destin de Muzan',
+  { id: 'wheel', kind: 'Hasard', hint: "Règle ta mise et tourne la roue : la case sous la flèche donne ton gain.", kanji: '運命', name: 'Roue de la fortune', theme: 'Roue du destin de Muzan',
     tagline: 'Fais tourner la roue, gagne un multiplicateur', top: '×6', mount: mountWheel,
     help: {
       goal: 'Fais tourner une roue de 20 cases : chaque case indique ton gain.',
@@ -524,7 +609,7 @@ export const GAMES = [
       table: [['Case ×6', '1 case sur 20 (5 %)', '×6'], ['Case ×2', '2 cases (10 %)', '×2'], ['Case ×1,5', '3 cases (15 %)', '×1,5'],
         ['Case ×1', '4 cases (20 %)', 'Mise rendue'], ['Case ✕', '10 cases (50 %)', 'Mise perdue']],
     } },
-  { id: 'double', kanji: '藤', name: 'Quitte ou double', theme: 'Glycine',
+  { id: 'double', kind: 'Prise de risque', hint: "Règle ta mise puis tente de doubler. Encaisse avant d'échouer !", kanji: '藤', name: 'Quitte ou double', theme: 'Glycine',
     tagline: 'Double ta mise ou perds tout', top: '×8', mount: mountDouble,
     help: {
       goal: "Double ton gain jusqu'à trois fois de suite, mais un seul échec te fait tout perdre.",

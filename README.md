@@ -4,6 +4,7 @@ Casino en ligne pour le RP Demon Slayer. **Monnaie fictive uniquement** : aucun 
 
 - **Connexion Steam** : les jetons sont rattachés au SteamID64, donc impossibles à perdre.
 - **10 jeux** réglés entre 90 % et 98 % de retour aux joueurs : le joueur peut gagner régulièrement, la banque gagne à long terme.
+- **Prise en main simple** : écran d'accueil en 3 étapes, bouton « ? Aide », consigne d'une phrase au-dessus de chaque jeu, règles détaillées au premier passage.
 - **Tout est côté serveur** (Supabase) : le navigateur ne peut ni modifier un solde ni choisir un résultat.
 - **Panneau admin** (`/admin.html`) : le staff donne ou retire des jetons, consulte les stats et règle les mises.
 - Pas de capital de départ ni de bonus quotidien pour l'instant : tout nouveau joueur commence à 0.
@@ -18,10 +19,12 @@ Casino en ligne pour le RP Demon Slayer. **Monnaie fictive uniquement** : aucun 
 | Machine à sous · *Les Cinq Respirations* | 22 % (+ 25 % remboursé) | jusqu'à ×20 | 91 % |
 | Carte à gratter · *Cartes Hanafuda* | 20 % (+ 10 % remboursé) | jusqu'à ×30 | 93 % |
 | Course de corbeaux · *Corbeaux Kasugai* | 16,7 % victoire · 50 % podium | ×5,5 · ×1,8 | 91,7 % · 90 % |
-| Bonneteau (3 gobelets) · *Trois coupes, une Nichirin* | 33 % | ×2,7 | 90 % |
+| Bonneteau (3 gobelets) · *Trois coupes, une Nichirin* | jeu d'adresse (1 sur 3 au hasard) | ×1,6 | ≈ 53 % au hasard |
 | Bataille · *Bataille des Piliers* | 46 % | ×2 (égalité = banque) | 92,3 % |
 | Roue de la fortune · *Roue du destin de Muzan* | 30 % (+ 20 % remboursé) | jusqu'à ×6 | 92,5 % |
 | Quitte ou double · *Glycine* | 45 % par étape | ×2, ×4, ×8 | 90 % → 73 % |
+
+**Bonneteau** : la lame est montrée, puis les coupes sont réellement mélangées sous les yeux du joueur, qui doit la suivre. C'est un jeu d'adresse : un joueur attentif gagne plus souvent que le hasard. Le gain (×1,6) et la mise maximale (1 000 par défaut) sont donc plus bas, pour que la banque ne soit pas ruinée. Regarde le « retour » du jeu dans l'onglet Statistiques de l'admin : s'il dépasse 100 %, baisse la mise maximale du bonneteau (onglet Jeux).
 
 Chaque jeu a une fenêtre « Comment jouer ? » (règles, gains et chances), ouverte automatiquement à la première visite.
 
@@ -33,7 +36,7 @@ Les taux sont vérifiés par des tests automatiques (10 000 manches par jeu, `np
 
 1. Crée un projet sur [supabase.com](https://supabase.com).
 2. **SQL Editor** : colle le contenu de `supabase/migrations/001_init.sql` et clique sur *Run*.
-   Si tu avais déjà lancé une ancienne version, lance aussi `002_game_names.sql` (met à jour les noms des jeux).
+   Si tu avais déjà lancé une ancienne version, lance aussi, dans l'ordre, `002_game_names.sql` (noms des jeux) puis `003_cups_skill.sql` (nouveau bonneteau). Ces fichiers peuvent être relancés sans risque.
 3. **Authentication > Sign In / Providers** :
    - laisse le fournisseur **Email** activé (la connexion Steam s'en sert en interne) ;
    - désactive **Allow new users to sign up** : seuls les comptes créés via Steam existent.

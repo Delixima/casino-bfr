@@ -49,6 +49,9 @@ insert into public.game_config (game, label, sort) values
   ('double', 'Quitte ou double', 10)
 on conflict (game) do nothing;
 
+-- Bonneteau : jeu d'adresse, mise maximale plus basse par défaut (modifiable dans l'admin)
+update public.game_config set max_bet = 1000 where game = 'cups' and max_bet = 10000;
+
 create table if not exists public.transactions (
   id            bigserial primary key,
   user_id       uuid not null references public.profiles (id) on delete cascade,
@@ -210,7 +213,7 @@ declare
   v_reds    int[] := array[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
-  if p_game not in ('chohan','roulette','slots','scratch','ravens','cups','war','wheel') then
+  if p_game not in ('chohan','roulette','slots','scratch','ravens','war','wheel') then
     raise exception 'unknown_game';
   end if;
   p_choice := coalesce(p_choice, '{}'::jsonb);
@@ -232,10 +235,6 @@ begin
     if v_type is null or v_type not in ('win','podium') then raise exception 'invalid_choice'; end if;
     begin v_n := (p_choice->>'pick')::int; exception when others then raise exception 'invalid_choice'; end;
     if v_n is null or v_n < 1 or v_n > 6 then raise exception 'invalid_choice'; end if;
-  end if;
-  if p_game = 'cups' then
-    begin v_n := (p_choice->>'pick')::int; exception when others then raise exception 'invalid_choice'; end;
-    if v_n is null or v_n < 1 or v_n > 3 then raise exception 'invalid_choice'; end if;
   end if;
 
   perform public._debit(p_game, p_bet);
@@ -300,12 +299,6 @@ begin
     end if;
     v_details := jsonb_build_object('order', to_jsonb(v_order), 'pick', v_n,
                                     'type', v_type, 'mult', v_mult);
-
-  elsif p_game = 'cups' then
-    v_slot := public._rand_int(3) + 1;
-    v_win := v_slot = v_n;
-    v_mult := case when v_win then 2.7 else 0 end;
-    v_details := jsonb_build_object('winning_cup', v_slot, 'pick', v_n, 'mult', v_mult);
 
   elsif p_game = 'war' then
     v_pc := public._rand_int(13) + 2;               -- 2..14 (14 = As)
@@ -615,6 +608,98 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- Bonneteau (3 coupes) : la lame est montrée, puis les coupes sont mélangées
+-- sous les yeux du joueur, qui doit la suivre. Le serveur décide de la
+-- position de départ et de la suite d'échanges (donc de la position finale) ;
+-- il garde la position finale et vérifie le choix du joueur à la fin.
+-- Gain : x1,6 (jeu d'adresse : un bon joueur gagne plus souvent que le hasard).
+-- ---------------------------------------------------------------------------
+
+create or replace function public.cups_start(p_bet bigint) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_uid   uuid := auth.uid();
+  v_bal   bigint;
+  v_start int;
+  v_pos   int;
+  v_n     int;
+  v_i     int;
+  v_p     int;
+  v_prev  int := -1;
+  v_a     int;
+  v_b     int;
+  v_swaps jsonb := '[]'::jsonb;
+begin
+  if v_uid is null then raise exception 'not_authenticated'; end if;
+  if exists (select 1 from public.game_sessions
+             where user_id = v_uid and game = 'cups' and status = 'active') then
+    raise exception 'game_in_progress';
+  end if;
+  v_bal := public._debit('cups', p_bet);
+
+  v_start := public._rand_int(3) + 1;              -- coupe qui cache la lame au départ
+  v_pos := v_start;
+  v_n := 14 + public._rand_int(7);                 -- 14 à 20 échanges
+  for v_i in 1..v_n loop
+    loop                                           -- jamais deux fois le même échange de suite
+      v_p := public._rand_int(3);
+      exit when v_p <> v_prev;
+    end loop;
+    v_prev := v_p;
+    v_a := case when v_p = 2 then 2 else 1 end;    -- 0:(1,2)  1:(1,3)  2:(2,3)
+    v_b := case when v_p = 0 then 2 else 3 end;
+    if v_pos = v_a then v_pos := v_b; elsif v_pos = v_b then v_pos := v_a; end if;
+    v_swaps := v_swaps || jsonb_build_array(jsonb_build_array(v_a, v_b));
+  end loop;
+
+  insert into public.game_sessions (user_id, game, bet, state)
+    values (v_uid, 'cups', p_bet, jsonb_build_object('final', v_pos));
+
+  return jsonb_build_object('game', 'cups', 'finished', false, 'balance', v_bal,
+    'details', jsonb_build_object('start', v_start, 'swaps', v_swaps));
+end $$;
+
+create or replace function public.cups_pick(p_pick int) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+  s public.game_sessions;
+  v_final int; v_win boolean; v_payout bigint; v_bal bigint;
+begin
+  if v_uid is null then raise exception 'not_authenticated'; end if;
+  if p_pick is null or p_pick < 1 or p_pick > 3 then raise exception 'invalid_choice'; end if;
+  select * into s from public.game_sessions
+    where user_id = v_uid and game = 'cups' and status = 'active' for update;
+  if not found then raise exception 'no_active_game'; end if;
+
+  v_final := (s.state->>'final')::int;
+  v_win := p_pick = v_final;
+  v_payout := case when v_win then floor(s.bet * 1.6)::bigint else 0 end;
+  v_bal := public._credit(v_uid, 'cups', s.bet, v_payout,
+    jsonb_build_object('pick', p_pick, 'winning_cup', v_final, 'mult', case when v_win then 1.6 else 0 end));
+  update public.game_sessions set status = 'done' where id = s.id;
+
+  return jsonb_build_object('game', 'cups', 'finished', true,
+    'result', public._result_of(s.bet, v_payout),
+    'bet', s.bet, 'payout', v_payout, 'balance', v_bal,
+    'details', jsonb_build_object('pick', p_pick, 'winning_cup', v_final));
+end $$;
+
+-- Partie en cours (page rechargée) : on ne renvoie jamais la position de la lame
+create or replace function public.cups_current() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_uid uuid := auth.uid(); s public.game_sessions; v_bal bigint;
+begin
+  if v_uid is null then raise exception 'not_authenticated'; end if;
+  select * into s from public.game_sessions
+    where user_id = v_uid and game = 'cups' and status = 'active';
+  if not found then return null; end if;
+  select balance into v_bal from public.profiles where id = v_uid;
+  return jsonb_build_object('game', 'cups', 'finished', false, 'balance', v_bal,
+    'details', jsonb_build_object('resumed', true, 'bet', s.bet));
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- Classement public (pseudo, avatar, solde uniquement)
 -- ---------------------------------------------------------------------------
 
@@ -764,6 +849,7 @@ grant execute on function
   public.play_instant(text, bigint, jsonb),
   public.bj_start(bigint), public.bj_action(text), public.bj_current(),
   public.qd_start(bigint), public.qd_step(), public.qd_cash(), public.qd_current(),
+  public.cups_start(bigint), public.cups_pick(int), public.cups_current(),
   public.leaderboard(),
   public.admin_list_players(text),
   public.admin_adjust_balance(text, bigint, text),
